@@ -1,0 +1,44 @@
+version: '3.9'
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    container_name: mssqlserver
+    user: '0:0'
+    volumes:
+      - mssql-demo-data:/var/opt/mssql/data
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=Lalala001..
+    ports:
+    ##Optional, only for test
+      - "1461:1433"
+    healthcheck:
+      test: ["CMD", "/opt/mssql-tools/bin/sqlcmd", "-S", "http://localhost:1433", "-U", "sa", "-P", "Lalala001..", "-Q", "SELECT 1", "||", "exit 1"]
+
+  private-webapi:
+    image: gfnprivatewebapi
+    build:
+      context: .
+      dockerfile: GFN.PrivateWebApi/Dockerfile
+    environment:
+      - ConnectionStrings__DbTest=Server=sqlserver;database=TestYUN;User Id=sa;Password=Lalala001..;
+      - RUN_MIGRATIONS=true
+    depends_on:
+      - sqlserver
+
+  public-webapi:
+    image: gfnpublicwebapi
+    build:
+      context: .
+      dockerfile: GFN.PublicWebApi/Dockerfile
+    ports:
+      - "5000:80"
+    environment:
+      - PrivateDataUrl=http://private-webapi
+    depends_on:
+      - private-webapi
+
+
+volumes:
+  mssql-demo-data:
